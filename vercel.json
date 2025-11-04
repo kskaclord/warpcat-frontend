@@ -1,0 +1,24 @@
+{
+  "redirects": [
+    { "source": "/", "destination": "/mini/launch", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/mini/:path*", "destination": "https://api.warpcat.xyz/mini/:path*" },
+    { "source": "/frame/:path*", "destination": "https://api.warpcat.xyz/frame/:path*" },
+    { "source": "/metadata/:path*", "destination": "https://api.warpcat.xyz/metadata/:path*" },
+    { "source": "/neynar/:path*", "destination": "https://api.warpcat.xyz/neynar/:path*" },
+    { "source": "/healthz", "destination": "https://api.warpcat.xyz/healthz" },
+    { "source": "/.well-known/:path*", "destination": "https://api.warpcat.xyz/.well-known/:path*" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://*.warpcast.com https://*.farcaster.xyz"
+        }
+      ]
+    }
+  ]
+}
