@@ -1,13 +1,10 @@
+// pages/mini/app.jsx
 import Head from "next/head";
-import { useEffect } from "react";
 
-const PUBLIC_BASE =
-  process.env.NEXT_PUBLIC_SITE_BASE || "https://warpcat.xyz";
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || "https://api.warpcat.xyz";
+const PUBLIC_BASE = process.env.NEXT_PUBLIC_SITE_BASE || "https://warpcat.xyz";
+const API_BASE    = process.env.NEXT_PUBLIC_API_BASE  || "https://api.warpcat.xyz";
 
 export default function MiniApp() {
-  // Script’i modül olarak enjekte ediyoruz (ready en başta!)
   const moduleScript = `
     import { createConfig, connect, getAccount, sendTransaction } from 'https://esm.sh/@wagmi/core@2.13.4';
     import { http } from 'https://esm.sh/viem@2.13.7';
@@ -21,7 +18,7 @@ export default function MiniApp() {
     const mintBtn    = document.getElementById('mint');
     const refreshBtn = document.getElementById('refresh');
 
-    const qs  = new URLSearchParams(location.search);
+    const qs = new URLSearchParams(location.search);
     const fid = qs.get('fid') || '0';
     const txUrl = '${API_BASE}/mini/tx?fid=' + encodeURIComponent(fid);
     const frameMintUrl = '${PUBLIC_BASE}/frame/mint?fid=' + encodeURIComponent(fid);
@@ -29,78 +26,56 @@ export default function MiniApp() {
     function setStatus(t){ statusEl.textContent = t; }
     function setBusy(b){ mintBtn.disabled = refreshBtn.disabled = b; }
 
-    // connector + wagmi config
     const fcConnector = new FarcasterMiniAppConnector({ chains: [base] });
-    const config = createConfig({
-      chains: [base],
-      transports: { [base.id]: http() },
-      connectors: [fcConnector],
-    });
+    const config = createConfig({ chains:[base], transports:{[base.id]:http()}, connectors:[fcConnector] });
 
     async function init(){
-      try{
-        // *** READY EN BAŞTA ***
-        await sdk.actions.ready();
+      try {
+        await sdk.actions.ready();              // *** READY EN BAŞTA ***
         okDot.style.background = '#0bd30b';
         setStatus('Ready.');
-      }catch(e){
+      } catch(e) {
         console.warn('sdk.ready warning:', e);
         setStatus('Ready.');
       }
 
-      refreshBtn.onclick = ()=> location.reload();
+      refreshBtn.onclick = () => location.reload();
 
-      mintBtn.onclick = async ()=>{
+      mintBtn.onclick = async () => {
         setBusy(true);
         resultEl.textContent = '';
         try{
-          // 1) tx payload backend'den
-          const r = await fetch(txUrl, { headers: { 'accept':'application/json', 'cache-control': 'no-cache' }});
+          const r = await fetch(txUrl, { headers:{ 'accept':'application/json', 'cache-control':'no-cache' }});
           if(!r.ok) throw new Error('Tx payload failed: ' + r.status);
           const tx = await r.json();
 
-          // 2) cüzdanı bağla (connector)
           let acc = getAccount(config);
-          if(!acc.isConnected){
-            await connect(config, { connector: fcConnector });
-            acc = getAccount(config);
-          }
+          if(!acc.isConnected){ await connect(config,{ connector: fcConnector }); acc = getAccount(config); }
           if(!acc.isConnected) throw new Error('Wallet provider missing');
 
-          // 3) chain id
-          const chainIdNum = Number(String(tx.chainId).split(':').pop() || ${8453});
+          const chainIdNum = Number(String(tx.chainId).split(':').pop() || 8453);
 
-          // 4) gönder
           setStatus('Opening wallet…');
           const hash = await sendTransaction(config, {
-            chainId: chainIdNum,
-            to: tx.params.to,
-            data: tx.params.data,
-            value: BigInt(tx.params.value),
+            chainId: chainIdNum, to: tx.params.to, data: tx.params.data, value: BigInt(tx.params.value)
           });
 
           setStatus('Mint submitted. Waiting for confirmation…');
-          const link = 'https://basescan.org/tx/' + hash;
-          resultEl.innerHTML = 'Tx: <a class="link" href="' + link + '" target="_blank" rel="noopener">view on BaseScan</a>';
+          resultEl.innerHTML = 'Tx: <a class="link" href="https://basescan.org/tx/'+
+              hash +'" target="_blank" rel="noopener">view on BaseScan</a>';
         }catch(err){
           console.error(err);
-          if(String(err?.message || err).toLowerCase().includes('wallet provider')){
+          if(String(err?.message||err).toLowerCase().includes('wallet provider')){
             setStatus('No wallet in this preview. Opening Frame mint…');
             try{ await sdk.actions.openUrl(frameMintUrl); }catch{ location.href = frameMintUrl; }
           }else{
             setStatus('Mint failed: ' + (err?.message || err));
           }
-        }finally{
-          setBusy(false);
-        }
+        }finally{ setBusy(false); }
       };
     }
-
     init();
   `;
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{},[]);
 
   return (
     <>
@@ -139,7 +114,6 @@ export default function MiniApp() {
         a.link{color:#8ab4ff;text-decoration:none}
       `}</style>
 
-      {/* module script (READY ilk satırlarda) */}
       <script type="module" dangerouslySetInnerHTML={{ __html: moduleScript }} />
     </>
   );
